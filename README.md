@@ -1,55 +1,46 @@
-# StockGuard AI — TSG Labs Chord Build Exercise (Starter)
+# StockGuard AI — Chord Custom MCP Backend
 
-This project creates a **fictional pharmacy inventory reconciliation agent**: a manager counts stock through WhatsApp; Chord calls a custom MCP service; the service saves the count, computes the variance, asks for a recount, and persists a case for owner review when a shortage is confirmed. No employee is accused of theft. No patient/customer data is used.
+Demo inventory reconciliation agent for **Harbour Pharmacy Demo**, using fictional data only.
 
-## Files
-- `SKILL.md`: upload as the teammate's skill and instruction file.
-- `server.py`: Streamable HTTP MCP server with five custom tools.
-- `stockguard_core.py`: SQLite-backed inventory, audit, investigation and notification logic.
-- `tests/test_stockguard.py`: business logic tests.
-- `requirements.txt`: Python dependencies.
+## Requirements
+- Python 3.11+
+- Chord teammate with `SKILL.md` uploaded
+- Render Web Service and Render Postgres (a free database may expire after 30 days)
 
-## Run locally
-Python 3.11+ recommended.
+## Local checks
 ```bash
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 pytest -q
-python server.py
 ```
-The MCP endpoint is `http://localhost:8000/mcp` for local testing. Chord **cannot** reach localhost: deploy the server to a persistent HTTPS host first and point Chord to `https://YOUR-HOST/mcp`.
+Tests use temporary SQLite databases. The hosted service uses PostgreSQL.
 
-Set `STOCKGUARD_DB` to a persistent writable SQLite path on your host. Important: temporary/ephemeral host storage loses audits and cases on restart. Use persistent disk or replace SQLite with a hosted persistent database for the demo. **Do not use real customer data.**
+## Deploy to Render
+1. Create a Render Postgres database in the same region as the Web Service.
+2. On the Postgres page, copy the **Internal Database URL**. It is secret; never commit it or include it in screenshots.
+3. In your Render Web Service, set build command `pip install -r requirements.txt` and start command `python server.py`.
+4. Add environment variables in Render:
+   - `DATABASE_URL`: the internal PostgreSQL URL.
+   - `STOCKGUARD_API_TOKEN`: a randomly generated high-entropy secret (use Render's Generate button).
+5. Deploy and verify `https://<your-service>.onrender.com/health` responds with `{"status":"ok"}`.
+6. In Chord, register custom MCP server URL `https://<your-service>.onrender.com/mcp`. Configure an Authorization header with `Bearer <STOCKGUARD_API_TOKEN>` if supported. **Do not put the secret in the skill file or GitHub.**
+7. Test the five exposed tools with Chord's tool connection and WhatsApp simulator.
 
-### Chord setup
-1. In Chord: **Teammates → Create a teammate**; upload `SKILL.md`, review, publish and activate.
-2. Host `server.py` publicly over HTTPS with dependencies installed. For a production-style deployment, restrict access with a remote bearer token or other supported authentication; never expose write actions without protection on a public internet endpoint. A private MCP host cannot be reached by Chord.
-3. In workspace MCP settings, register your `https://HOST/mcp` server with Streamable HTTP and appropriate credentials. Enable it; scope the server to StockGuard; confirm tool discovery and health.
-4. In teammate settings → Tools, ensure tools are on and connected. Test in teammate chat, then use the TSG Labs WhatsApp simulator.
-5. Verify the actual SQLite `audits`, `investigations`, and `notifications` records after running the simulator. A healthy MCP connection is not proof that a business tool executed.
+**If Chord cannot send a bearer token to a custom MCP server, do not disable authentication.** Check the supported authentication settings and adapt the server if necessary.
 
-### Example demo scenario
-- “Start today's stock check.”
-- Select `AMOX500`.
-- First count: `68` packs (expected 75, hidden until first submission).
-- Recount: `68` packs.
-- “Yes, open an investigation.”
-- Confirm the tool returns `INV-...` and a queued owner-review record. This is not an actual delivered alert.
+## Demo scenario
+- Product: `AMOX500`
+- Expected stock: 100 opening + 20 received - 40 sold - 5 write-offs = **75 packs**.
+- Count: 68; recount: 68; shortage: 7 packs; estimated retail exposure: **₦10,500**.
+- Investigation creates a case and **queued notification record**, not an actual message to the owner.
 
-### Sample inventory and movement records
-| Code | Opening | Received | Returns | Sold | Transfers out | Write-offs | Expected | Retail unit value |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| AMOX500 | 100 | 20 | 0 | 40 | 0 | 5 | 75 | ₦1,500 |
-| INHALER | 40 | 0 | 0 | 12 | 0 | 0 | 28 | ₦9,000 |
-| VITC | 25 | 5 | 0 | 10 | 0 | 0 | 20 | ₦500 |
+## Security and limitations
+- MCP requires `Authorization: Bearer <STOCKGUARD_API_TOKEN>`; `/health` is public.
+- One shared demo credential; no individual user authentication or roles. The simulator assumes an authorised manager.
+- PostgreSQL retains records across Web Service restarts; free Render Postgres instances can have expiry limitations.
+- Free Web Services may spin down when idle.
+- Fictional seeded inventory, not a live POS integration or real customer data.
+- No medical advice, inventory adjustments or theft accusations.
+- If PostgreSQL is unavailable, the tools fail instead of fabricating stock data.
 
-This data is fixed demo data rather than a live POS integration. Expected stock = opening + received + returns − sold − transfers out − write-offs. Retail exposure = shortage × selling price, **not confirmed lost revenue**.
-
-### Boundaries and production gaps
-- Simulator user is assumed to be a manager; production needs manager authentication, secure store-level tenancy and audit logs.
-- Owner alerts are queued database **records**, not real WhatsApp notifications.
-- No batch-level pharmaceutical controls, controlled medicine workflows, live stock adjustments, or medical guidance.
-- No real POS connection; an actual deployment needs authenticated movement feeds and corrections for backdated transactions.
-- Avoid public hosting without server-side auth and persistence.
-
-### AI use disclosure
-Used ChatGPT to draft the initial business skill, prototype code, dataset and automated tests. Review the code and record any additional AI assistance and manual changes before submission.
+## AI assistance
+AI helped draft skill instructions, design the prototype, and write implementation and tests. End-to-end Chord validation remains required.
