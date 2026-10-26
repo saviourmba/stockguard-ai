@@ -32,3 +32,34 @@ def test_invalid_and_duplicate(db):
     assert submit(db,a['audit_id'],20)['status']=='matched'
     with pytest.raises(ValueError): submit(db,a['audit_id'],20)
     with pytest.raises(ValueError): investigate(db,a['audit_id'])
+
+def test_investigation_is_persisted_and_reusable(db):
+    audit = start(db, 'AMOX500')
+    submit(db, audit['audit_id'], 68)
+    recount(db, audit['audit_id'], 68)
+    created = investigate(db, audit['audit_id'])
+    assert created['investigation']['status'] == 'pending_owner_review'
+    assert created['investigation']['retail_exposure_naira'] == 10500
+    assert created['notification']['investigation_id'] == created['investigation']['id']
+    assert db.execute('SELECT COUNT(*) FROM investigations').fetchone()[0] == 1
+    second = investigate(db, audit['audit_id'])
+    assert second['duplicate_prevented'] is True
+    assert second['investigation']['id'] == created['investigation']['id']
+    assert db.execute('SELECT COUNT(*) FROM investigations').fetchone()[0] == 1
+
+def test_invalid_count_types_and_unknown_product(db):
+    for invalid in [-1, 2.5, True, '10']:
+        a = start(db, 'VITC')
+        with pytest.raises(ValueError):
+            submit(db, a['audit_id'], invalid)
+    with pytest.raises(ValueError):
+        start(db, 'UNKNOWN')
+
+def test_surplus_does_not_create_shortage_case(db):
+    a = start(db, 'INHALER')
+    first = submit(db, a['audit_id'], 30)
+    assert first['variance'] == 2
+    assert first['estimated_retail_exposure_naira'] == 0
+    assert recount(db, a['audit_id'], 30)['status'] == 'discrepancy_confirmed'
+    with pytest.raises(ValueError, match='No shortage'):
+        investigate(db, a['audit_id'])
