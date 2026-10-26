@@ -104,14 +104,14 @@ def investigate(db, audit_id):
         raise ValueError('No shortage to investigate')
     iid = 'INV-' + uuid.uuid4().hex[:8].upper()
     nid = 'NOT-' + uuid.uuid4().hex[:8].upper()
-    with db:
-        db.execute('INSERT INTO investigations VALUES (?,?,?,?,?,?)',
-                   (iid, audit_id, 'pending_owner_review', gap, gap * p['price_naira'], now()))
-        db.execute('INSERT INTO notifications VALUES (?,?,?,?)',
-                   (nid, iid, 'store_owner', 'queued_for_review'))
-        db.execute('UPDATE audits SET status=? WHERE id=?', ('investigation_open', audit_id))
+    db.execute('INSERT INTO investigations VALUES (?,?,?,?,?,?)',
+               (iid, audit_id, 'pending_owner_review', gap, gap * p['price_naira'], now()))
+    db.execute('INSERT INTO notifications VALUES (?,?,?,?)',
+               (nid, iid, 'store_owner', 'queued_for_review'))
+    db.execute('UPDATE audits SET status=? WHERE id=?', ('investigation_open', audit_id))
+    db.commit()
     return {'investigation': dump(db.execute('SELECT * FROM investigations WHERE id=?', (iid,)).fetchone()),
-            'notification': dump(db.execute('SELECT * FROM notifications WHERE id=?', (nid,)).fetchone()),
+            'notification': dump(db.execute('SELECT * FROM notifications WHERE investigation_id=?', (iid,)).fetchone()),
             'duplicate_prevented': False}
 
 class PostgresDB:
