@@ -1,0 +1,24 @@
+name: StockGuard live MCP integration
+on:
+  workflow_dispatch:
+jobs:
+  live-mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install compatible MCP client
+        run: python -m pip install 'mcp>=1.9,<2'
+      - name: Run end-to-end test against hosted backend
+        env:
+          STOCKGUARD_API_TOKEN: ${{ secrets.STOCKGUARD_API_TOKEN }}
+          STOCKGUARD_MCP_URL: https://stockguard-ai-78wg.onrender.com/mcp
+        run: |
+          if [ -z "$STOCKGUARD_API_TOKEN" ]; then
+            echo "Missing repository secret STOCKGUARD_API_TOKEN"
+            exit 1
+          fi
+          python tests/live_mcp_smoke.py
