@@ -44,3 +44,13 @@ Tests use temporary SQLite databases. The hosted service uses PostgreSQL.
 
 ## AI assistance
 AI helped draft skill instructions, design the prototype, and write implementation and tests. End-to-end Chord validation remains required.
+
+## Assessment evidence and handover
+- [Three-minute demonstration script](docs/DEMO_SCRIPT.md)
+- [Deployment field notes](docs/DEPLOYMENT_FIELD_NOTES.md)
+- [Business owner go-live note](docs/GO_LIVE_NOTE.md)
+- [Six-part submission draft](docs/SUBMISSION_DRAFT.md)
+- [Backend regression test workflow](.github/workflows/tests.yml)
+- [Manual hosted MCP integration test](.github/workflows/live-mcp.yml)
+
+The hosted MCP integration test passed in GitHub Actions run #2 on 27 October 2026, but a complete Chord WhatsApp simulator conversation has **not yet** been verified due to a billing settlement error. Treat the script as a rehearsal until the simulator demonstration succeeds. The repository is private: grant reviewers access when sharing the code.
